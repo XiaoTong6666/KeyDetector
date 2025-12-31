@@ -14,6 +14,8 @@ import android.widget.TextView;
 
 import com.xiaotong.keydetector.checker.Checker;
 
+import java.util.Map;
+
 public class MainActivity extends Activity {
 
     @Override
@@ -73,7 +75,6 @@ public class MainActivity extends Activity {
                 } else {
                     code = detector.run(ctx);
                 }
-
                 String resultText = parseResult(code);
 
                 final int finalCode = code;
@@ -90,13 +91,32 @@ public class MainActivity extends Activity {
 
     private String parseResult(int code) {
         StringBuilder sb = new StringBuilder();
-        sb.append("状态码: ").append(code).append("\n");
-        for (Integer flag : DetectorEngine.FlagCheckerMap.keySet()) {
-            Checker checker = DetectorEngine.FlagCheckerMap.get(flag);
-            if ((code & flag) != 0 && checker != null) {
-                sb.append(String.format(checker.description(), flag)).append("\n");
+        sb.append("Status Code: ").append(code).append("\n")
+                .append("状态码: ").append(code).append("\n\n");
+        if (code < 3) {
+            sb.append(parseSimpleStatus(code));
+            return sb.toString();
+        }
+        for (Map.Entry<Integer, Checker> entry : DetectorEngine.FlagCheckerMap.entrySet()) {
+            int flag = entry.getKey();
+            Checker checker = entry.getValue();
+            if (checker != null && (code & flag) != 0) {
+                sb.append(String.format(checker.description(), flag))
+                        .append("\n\n");
             }
         }
         return sb.toString();
+    }
+
+    private String parseSimpleStatus(int code) {
+        switch (code) {
+            case 1:
+                return "Normal (1)";
+            case 2:
+                return "Tampered Attestation Key (2)\n"
+                        + "密钥生成 / 使用异常或证书链一致性异常";
+            default:
+                return String.format("Something Wrong (%s)", code);
+        }
     }
 }

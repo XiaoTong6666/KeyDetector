@@ -15,10 +15,11 @@ import com.xiaotong.keydetector.checker.RevokedKeyChecker;
 import com.xiaotong.keydetector.checker.UnknownRootChecker;
 import com.xiaotong.keydetector.checker.VBMetaChecker;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public final class DetectorEngine {
-    public static final HashMap<Integer, Checker> FlagCheckerMap = new HashMap<>();
+    public static final LinkedHashMap<Integer, Checker> FlagCheckerMap = new LinkedHashMap<>();
     static {
         FlagCheckerMap.put(4, new BinderHookChecker());
         FlagCheckerMap.put(8, new AOSPRootChecker());
@@ -35,18 +36,17 @@ public final class DetectorEngine {
     public int run(CheckerContext ctx) {
         int result = 0;
 
-        for (Integer flag : FlagCheckerMap.keySet()) {
-            Checker checker = FlagCheckerMap.get(flag);
+        for (Map.Entry<Integer, Checker> entry : DetectorEngine.FlagCheckerMap.entrySet()) {
             try {
-                if (checker == null) continue; // ?
-                boolean hit = checker.check(ctx);
+                if (entry.getValue() == null) continue; // ?
+                boolean hit = entry.getValue().check(ctx);
                 if (hit) {
-                    result |= flag;
-                    Log.e("Detector", "Hit: " + checker.name()
-                            + " flag=0x" + Integer.toHexString(flag));
+                    result |= entry.getKey();
+                    Log.e("Detector", "Hit: " + entry.getValue().name()
+                            + " flag=0x" + Integer.toHexString(entry.getKey()));
                 }
             } catch (Throwable t) {
-                Log.e("Detector", "Checker crashed: " + checker.name(), t);
+                Log.e("Detector", "Checker crashed: " + entry.getValue().name(), t);
                 result |= 2;
             }
         }
