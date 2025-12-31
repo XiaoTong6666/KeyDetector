@@ -10,7 +10,7 @@ import com.xiaotong.keydetector.CheckerContext;
 import java.security.KeyPairGenerator;
 
 public final class AttestationComplianceChecker extends Checker{
-    private final static short CHALLENGE_LENGTH = 1024;
+    private final static short CHALLENGE_LENGTH = 256;
 
     @Override
     public String name() {
@@ -41,6 +41,6 @@ public final class AttestationComplianceChecker extends Checker{
 
     @Override
     public String description() {
-        return "Non-compliant Keystore Detected (%d)\n检测到不规范的 KeyStore , Challenge 长度可为 " + Integer.toString(CHALLENGE_LENGTH);
+        return "Non-compliant Keystore Detected (%d)\n检测到不规范的 KeyStore , Challenge 长度不应该允许为 " + Integer.toString(CHALLENGE_LENGTH);
     }
 }
