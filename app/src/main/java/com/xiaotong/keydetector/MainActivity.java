@@ -81,7 +81,7 @@ public class MainActivity extends Activity {
                 runOnUiThread(() -> {
                     tvResult.setText(resultText);
                     int color = Color.parseColor("#006400");
-                    if ((finalCode & 1) != 0) tvResult.setTextColor(Color.RED);
+                    if ((finalCode & 1) == 0) color = Color.RED;
                     tvResult.setTextColor(color);
                     btn.setEnabled(true);
                 });
