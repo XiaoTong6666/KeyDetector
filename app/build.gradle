@@ -63,6 +63,7 @@ dependencies {
     implementation libs.bcpkix.jdk15to18
     implementation libs.bcprov.jdk15to18
     implementation libs.hiddenapibypass
+    implementation libs.material
 }
 import java.security.MessageDigest
 
@@ -114,4 +115,3 @@ tasks.register("checkAttestationStatus") {
         }
     }
 }
-

@@ -1,34 +1,48 @@
 package com.xiaotong.keydetector;
 
 import android.app.Activity;
-import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
-import android.widget.TextView;
+
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.textview.MaterialTextView;
+import com.google.android.material.color.DynamicColors;
 
 public class MainActivity extends Activity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        DynamicColors.applyToActivityIfAvailable(this);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(32, 32, 32, 32);
         root.setGravity(Gravity.CENTER_HORIZONTAL);
 
-        TextView title = new TextView(this);
+        ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(systemBars.left + 32, systemBars.top + 32, systemBars.right + 32, systemBars.bottom + 32);
+            return WindowInsetsCompat.CONSUMED;
+        });
+
+        MaterialTextView title = new MaterialTextView(this);
         title.setText("Key Detector");
-        title.setTextSize(20);
+        title.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_HeadlineSmall);
         title.setGravity(Gravity.CENTER);
         title.setPadding(0, 0, 0, 32);
         root.addView(title);
 
-        Button btn = new Button(this);
+        MaterialButton btn = new MaterialButton(this);
         btn.setId(ViewGroup.generateViewId());
         btn.setText("开始检测 (Key Attestation)");
         root.addView(btn);
@@ -41,14 +55,10 @@ public class MainActivity extends Activity {
         scrollParams.topMargin = 32;
         scrollView.setLayoutParams(scrollParams);
 
-        scrollView.setBackgroundColor(Color.parseColor("#F0F0F0"));
-        scrollView.setPadding(16,16,16,16);
-
-        TextView tvResult = new TextView(this);
+        MaterialTextView tvResult = new MaterialTextView(this);
         tvResult.setText("点击按钮开始检测...");
-        tvResult.setTextSize(14);
-        tvResult.setTypeface(android.graphics.Typeface.MONOSPACE);
-        tvResult.setTextColor(Color.BLACK);
+        tvResult.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyMedium);
+        tvResult.setTypeface(Typeface.MONOSPACE);
 
         scrollView.addView(tvResult);
         root.addView(scrollView);
@@ -58,7 +68,6 @@ public class MainActivity extends Activity {
         btn.setOnClickListener(v -> {
             btn.setEnabled(false);
             tvResult.setText("正在生成密钥并验证证书链...\n请稍候...");
-            tvResult.setTextColor(Color.DKGRAY);
 
             new Thread(() -> {
                 PoCDetector detector = new PoCDetector(getApplicationContext());
@@ -71,9 +80,9 @@ public class MainActivity extends Activity {
                     boolean ok = (code & 1) != 0
                             && (code & (2 | 8 | 16 | 32 | 64 | 128 | 256 | 512)) == 0;
                     if (!ok) {
-                        tvResult.setTextColor(Color.RED);
+                        tvResult.setTextColor(getColor(com.google.android.material.R.color.material_dynamic_primary0));
                     } else {
-                        tvResult.setTextColor(Color.parseColor("#006400"));
+                        tvResult.setTextColor(getColor(com.google.android.material.R.color.material_dynamic_tertiary70));
                     }
                     btn.setEnabled(true);
                 });

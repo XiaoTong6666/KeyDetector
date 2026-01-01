@@ -11,7 +11,7 @@
         android:label="Key Detector"
         android:roundIcon="@drawable/ic_logo"
         android:supportsRtl="true"
-        android:theme="@android:style/Theme.Black">
+        android:theme="@style/Theme.Material3.DayNight">
         <activity
             android:name="com.xiaotong.keydetector.MainActivity"
             android:exported="true">
