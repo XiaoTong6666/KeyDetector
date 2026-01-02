@@ -1,5 +1,7 @@
 package com.xiaotong.keydetector;
 
+import static com.xiaotong.keydetector.Util.getCheckerContext;
+
 import android.app.Activity;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -9,6 +11,10 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+
+import com.xiaotong.keydetector.checker.Checker;
+
+import java.util.Map;
 
 public class MainActivity extends Activity {
 
@@ -61,20 +67,22 @@ public class MainActivity extends Activity {
             tvResult.setTextColor(Color.DKGRAY);
 
             new Thread(() -> {
-                PoCDetector detector = new PoCDetector(getApplicationContext());
-                int code = detector.runDetection();
-
+                DetectorEngine detector = new DetectorEngine();
+                int code;
+                CheckerContext ctx = getCheckerContext(this);
+                if (ctx == null) {
+                    code = 2;
+                } else {
+                    code = detector.run(ctx);
+                }
                 String resultText = parseResult(code);
 
+                final int finalCode = code;
                 runOnUiThread(() -> {
                     tvResult.setText(resultText);
-                    boolean ok = (code & 1) != 0
-                            && (code & (2 | 8 | 16 | 32 | 64 | 128 | 256 | 512)) == 0;
-                    if (!ok) {
-                        tvResult.setTextColor(Color.RED);
-                    } else {
-                        tvResult.setTextColor(Color.parseColor("#006400"));
-                    }
+                    int color = Color.parseColor("#006400");
+                    if ((finalCode & 1) == 0) color = Color.RED;
+                    tvResult.setTextColor(color);
                     btn.setEnabled(true);
                 });
             }).start();
@@ -83,51 +91,32 @@ public class MainActivity extends Activity {
 
     private String parseResult(int code) {
         StringBuilder sb = new StringBuilder();
-        sb.append("状态码: ").append(code).append("\n");
-
-        if ((code & 1) != 0) {
-            sb.append("Normal (1)\n");
-        } else {
-            sb.append("Abnormal (missing 1)\n");
+        sb.append("Status Code: ").append(code).append("\n")
+                .append("状态码: ").append(code).append("\n\n");
+        if (code < 3) {
+            sb.append(parseSimpleStatus(code));
+            return sb.toString();
         }
-
-        if ((code & 2) != 0) {
-            sb.append("Tampered Attestation Key (2)\n");
-            sb.append("密钥生成/使用异常或证书链一致性异常\n");
+        for (Map.Entry<Integer, Checker> entry : DetectorEngine.FlagCheckerMap.entrySet()) {
+            int flag = entry.getKey();
+            Checker checker = entry.getValue();
+            if (checker != null && (code & flag) != 0) {
+                sb.append(String.format(checker.description(), flag))
+                        .append("\n\n");
+            }
         }
-        if ((code & 4) != 0) {
-            sb.append("Hook Failed (4)\n");
-            sb.append("尝试 Hook ServiceManager 失败\n");
-        }
-        if ((code & 8) != 0) {
-            sb.append("AOSP Attestation Key (8)\n");
-            sb.append("检测到软件级 (AOSP) 根证书\n");
-        }
-        if ((code & 16) != 0) {
-            sb.append("Unknown Attestation Key (16)\n");
-            sb.append("根证书未知\n");
-        }
-        if ((code & 32) != 0) {
-            sb.append("VBMeta Mismatch (32)\n");
-            sb.append("VBMeta Hash 不一致或 Attestation Challenge 不匹配（可能重放）\n");
-        }
-        if ((code & 64) != 0) {
-            sb.append("Broken Chain (64)\n");
-            sb.append("证书链签名验证失败，疑似中间人篡改\n");
-        }
-        if ((code & 128) != 0) {
-            sb.append("Key Mismatch (128)\n");
-            sb.append("私钥与证书公钥不匹配，严重的欺诈行为\n");
-        }
-        if ((code & 256) != 0) {
-            sb.append("Revoked Key (256)\n");
-            sb.append("检测到已泄露的黑名单密钥\n");
-        }
-        if ((code & 512) != 0) {
-            sb.append("Patch Mode Detected (512)\n");
-            sb.append("生成路径与读取路径返回的证书不一致，疑似被 Patch / Hack / 重签名\n");
-        }
-
         return sb.toString();
+    }
+
+    private String parseSimpleStatus(int code) {
+        switch (code) {
+            case 1:
+                return "Normal (1)";
+            case 2:
+                return "Tampered Attestation Key (2)\n"
+                        + "密钥生成 / 使用异常或证书链一致性异常";
+            default:
+                return String.format("Something Wrong (%s)", code);
+        }
     }
 }

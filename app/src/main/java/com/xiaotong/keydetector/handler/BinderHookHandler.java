@@ -1,4 +1,4 @@
-package com.xiaotong.keydetector;
+package com.xiaotong.keydetector.handler;
 
 import android.os.Build;
 import android.os.IBinder;

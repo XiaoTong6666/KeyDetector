@@ -17,11 +17,11 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-final class KeyboxRevocationList {
+public final class KeyboxRevocationList {
     private static final String TAG = "KeyboxRevocationList";
     private static volatile Map<String, RevocationEntry> sEntries;
 
-    static final class RevocationEntry {
+    public static final class RevocationEntry {
         final String status;
         final String reason;
 
@@ -30,7 +30,7 @@ final class KeyboxRevocationList {
             this.reason = reason;
         }
 
-        boolean isRevoked() {
+        public boolean isRevoked() {
             return "REVOKED".equalsIgnoreCase(status);
         }
     }
@@ -52,7 +52,7 @@ final class KeyboxRevocationList {
         return out;
     }
 
-    static RevocationEntry getEntry(Context context, String serialHex) {
+    public static RevocationEntry getEntry(Context context, String serialHex) {
         if (context == null || serialHex == null) return null;
         String normalized = serialHex.trim().toLowerCase(Locale.US);
         if (normalized.isEmpty()) return null;
