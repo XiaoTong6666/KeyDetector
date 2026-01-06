@@ -20,14 +20,12 @@ public final class VBMetaChecker extends Checker {
     public boolean check(CheckerContext ctx) throws Exception {
         final byte[] systemVBMetaDigest = hexStringToByteArray(getSystemProperty("ro.boot.vbmeta.digest"));
         RootOfTrust rot = RootOfTrust.parse(ctx.certChain.get(0));
-        if (rot == null) return true;
+        if (rot == null) return false;
         Log.d("VBMetaChecker", "rot: " + rot);
-        boolean digestEqualsHash = !Arrays.equals(systemVBMetaDigest, rot.getVerifiedBootHash());
-        boolean digestEqualsKey = !Arrays.equals(systemVBMetaDigest, rot.getVerifiedBootKey());
-        boolean bootStateUnverified = rot.getVerifiedBootState() != 0; // UNVERIFIED
+        boolean digestMismatchHash = !Arrays.equals(systemVBMetaDigest, rot.getVerifiedBootHash());
+        boolean bootStateUnverified = rot.getVerifiedBootState() != 0; // 0 = VERIFIED
         boolean deviceUnlocked = !rot.getDeviceLocked();
-        return digestEqualsHash
-                || digestEqualsKey
+        return digestMismatchHash
                 || bootStateUnverified
                 || deviceUnlocked;
     }
