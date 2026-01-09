@@ -22,7 +22,19 @@ public final class VBMetaChecker extends Checker {
         RootOfTrust rot = RootOfTrust.parse(ctx.certChain.get(0));
         if (rot == null) return false;
         Log.d("VBMetaChecker", "rot: " + rot);
-        boolean digestMismatchHash = !Arrays.equals(systemVBMetaDigest, rot.getVerifiedBootHash());
+
+        boolean isDummyHash = true;
+        byte[] hash = rot.getVerifiedBootHash();
+        if (hash != null) {
+            for (byte b : hash) {
+                if (b != 0) {
+                    isDummyHash = false;
+                    break;
+                }
+            }
+        }
+
+        boolean digestMismatchHash = !isDummyHash && !Arrays.equals(systemVBMetaDigest, hash);
         boolean bootStateUnverified = rot.getVerifiedBootState() != 0; // 0 = VERIFIED
         boolean deviceUnlocked = !rot.getDeviceLocked();
         return digestMismatchHash
