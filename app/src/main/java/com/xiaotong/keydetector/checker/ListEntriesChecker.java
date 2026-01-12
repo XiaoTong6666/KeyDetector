@@ -39,6 +39,7 @@ import java.util.List;
  * - 其他不完整的 Hook 实现
  */
 public final class ListEntriesChecker extends Checker {
+    private static final String TAG = "ListEntriesChecker";
     private static final String TEST_ALIAS = "KeyDetector_ListEntries";
 
     @Override
@@ -47,30 +48,31 @@ public final class ListEntriesChecker extends Checker {
     }
 
     @Override
-    public boolean check(CheckerContext ctx) throws Exception {
+    public boolean check(CheckerContext ctx) {
         if (Build.VERSION.SDK_INT < 31) {
             return false;
         }
 
-        KeyStore keyStore = KeyStore.getInstance(KEYSTORE_PROVIDER);
-        keyStore.load(null);
+        KeyStore keyStore = null;
+        try {
+            keyStore = KeyStore.getInstance(KEYSTORE_PROVIDER);
+            keyStore.load(null);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to initialize KeyStore", e);
+            return false;
+        }
 
         try {
             if (keyStore.containsAlias(TEST_ALIAS)) {
                 keyStore.deleteEntry(TEST_ALIAS);
             }
 
-            try {
-                KeyPairGenerator kpg = KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_EC, KEYSTORE_PROVIDER);
-                kpg.initialize(new KeyGenParameterSpec.Builder(TEST_ALIAS, KeyProperties.PURPOSE_SIGN)
-                        .setAlgorithmParameterSpec(new ECGenParameterSpec("secp256r1"))
-                        .setDigests(KeyProperties.DIGEST_SHA256)
-                        .build());
-                kpg.generateKeyPair();
-            } catch (Exception e) {
-                Log.w("ListEntriesChecker", "Failed to generate test key", e);
-                return false;
-            }
+            KeyPairGenerator kpg = KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_EC, KEYSTORE_PROVIDER);
+            kpg.initialize(new KeyGenParameterSpec.Builder(TEST_ALIAS, KeyProperties.PURPOSE_SIGN)
+                    .setAlgorithmParameterSpec(new ECGenParameterSpec("secp256r1"))
+                    .setDigests(KeyProperties.DIGEST_SHA256)
+                    .build());
+            kpg.generateKeyPair();
 
             boolean containsAliasResult = keyStore.containsAlias(TEST_ALIAS);
 
@@ -82,48 +84,65 @@ public final class ListEntriesChecker extends Checker {
             boolean aliasesContainsKey = aliasesList.contains(TEST_ALIAS);
 
             if (containsAliasResult && !aliasesContainsKey) {
-                Log.e("ListEntriesChecker", "ANOMALY: listEntries inconsistency detected!");
-                Log.e("ListEntriesChecker", "• containsAlias() = true (getKeyEntry intercepted by Hook)");
-                Log.e("ListEntriesChecker", "• aliases() doesn't contain key (listEntries not intercepted)");
-                Log.e("ListEntriesChecker", "• Key exists only in Hook's cache, not in real Keystore2 DB");
-                Log.e("ListEntriesChecker", "• Total aliases from real DB: " + aliasesList.size());
+                Log.e(TAG, "ANOMALY: listEntries inconsistency detected! (contains=true, list=false)");
+                Log.e(TAG, "ANOMALY: listEntries inconsistency detected!");
+                Log.e(TAG, "• containsAlias() = true (getKeyEntry intercepted by Hook)");
+                Log.e(TAG, "• aliases() doesn't contain key (listEntries not intercepted)");
+                Log.e(TAG, "• Key exists only in Hook's cache, not in real Keystore2 DB");
+                Log.e(TAG, "• Total aliases from real DB: " + aliasesList.size());
                 return true;
             }
 
             if (!containsAliasResult && aliasesContainsKey) {
-                Log.e("ListEntriesChecker", "ANOMALY: Reverse inconsistency detected!");
-                Log.e("ListEntriesChecker", "• containsAlias() = false");
-                Log.e("ListEntriesChecker", "• aliases() contains key = true");
-                Log.e("ListEntriesChecker", "• This indicates abnormal getKeyEntry interception");
+                Log.e(TAG, "ANOMALY: Reverse inconsistency detected! (contains=false, list=true)");
+                Log.e(TAG, "• containsAlias() = false");
+                Log.e(TAG, "• aliases() contains key = true");
+                Log.e(TAG, "• This indicates abnormal getKeyEntry interception");
                 return true;
+                /*}
+
+                if (containsAliasResult && aliasesContainsKey) {
+                    Log.d(TAG, "Native Keystore2 behavior confirmed");
+                    Log.d(TAG, "• containsAlias() = true");
+                    Log.d(TAG, "• aliases() contains key = true");
+                    Log.d(TAG, "• Key properly persisted to Keystore2 database");
+                    return false;*/
             }
 
-            if (containsAliasResult && aliasesContainsKey) {
-                Log.d("ListEntriesChecker", "Native Keystore2 behavior confirmed");
-                Log.d("ListEntriesChecker", "• containsAlias() = true");
-                Log.d("ListEntriesChecker", "• aliases() contains key = true");
-                Log.d("ListEntriesChecker", "• Key properly persisted to Keystore2 database");
-                return false;
-            }
-
-            Log.d("ListEntriesChecker", "Inconclusive: Key not found by either method");
+            Log.d(TAG, "Check passed: Consistent behavior between containsAlias and aliases.");
             return false;
 
         } catch (Exception e) {
-            Log.w("ListEntriesChecker", "Check failed", e);
+            String stackTrace = Log.getStackTraceString(e);
+
+            if (e instanceof android.os.BadParcelableException
+                    || stackTrace.contains("BadParcelableException")
+                    || stackTrace.contains("Parcelable too small")
+                    || stackTrace.contains("KeyDescriptor.readFromParcel")) {
+
+                Log.e(
+                        TAG,
+                        "CRITICAL: Hook Framework crashed during Binder transaction! This is a strong indicator for TEESimulator.",
+                        e);
+                return true;
+            }
+
+            Log.w(TAG, "Check failed with an unrelated exception.", e);
             return false;
+
         } finally {
             try {
-                if (keyStore.containsAlias(TEST_ALIAS)) {
+                if (keyStore != null && keyStore.containsAlias(TEST_ALIAS)) {
                     keyStore.deleteEntry(TEST_ALIAS);
                 }
-            } catch (Exception ignored) {
+            } catch (Exception cleanupException) {
+                Log.w(TAG, "Failed to cleanup test key.", cleanupException);
             }
         }
     }
 
     @Override
     public String description() {
-        return "IKeystoreService ListEntries Inconsistency (%d) - containsAlias/aliases 不一致";
+        return "IKeystoreService ListEntries Inconsistency (%d)\n检测 listEntries 是否被 Hook 且处理不当";
     }
 }
