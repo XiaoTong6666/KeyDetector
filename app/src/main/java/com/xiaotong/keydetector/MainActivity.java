@@ -31,7 +31,8 @@ public class MainActivity extends Activity {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setGravity(Gravity.CENTER_HORIZONTAL);
 
-        root.setBackgroundColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, Color.WHITE));
+        root.setBackgroundColor(
+                MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, Color.WHITE));
 
         ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
             var systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -42,7 +43,8 @@ public class MainActivity extends Activity {
         MaterialTextView title = new MaterialTextView(this);
         title.setText("Key Detector");
         title.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_HeadlineSmall);
-        title.setTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, Color.BLACK));
+        title.setTextColor(
+                MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, Color.BLACK));
         title.setGravity(Gravity.CENTER);
         title.setLayoutParams(new LinearLayout.LayoutParams(-1, -2));
         title.setPadding(0, 32, 0, 48);
@@ -57,7 +59,8 @@ public class MainActivity extends Activity {
         scrollParams.topMargin = 32;
         scrollView.setLayoutParams(scrollParams);
 
-        int surfaceVariant = MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerLow, Color.LTGRAY);
+        int surfaceVariant = MaterialColors.getColor(
+                this, com.google.android.material.R.attr.colorSurfaceContainerLow, Color.LTGRAY);
         scrollView.setBackgroundColor(surfaceVariant);
         scrollView.setPadding(16, 16, 16, 16);
 
@@ -74,23 +77,25 @@ public class MainActivity extends Activity {
             btn.setEnabled(false);
             tvResult.setText("正在生成密钥并验证证书链...\n请稍候...");
             // 优化：使用语义化颜色属性
-            tvResult.setTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.GRAY));
+            tvResult.setTextColor(MaterialColors.getColor(
+                    this, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.GRAY));
 
             new Thread(() -> {
-                DetectorEngine detector = new DetectorEngine();
-                CheckerContext ctx = getCheckerContext(this);
-                int code = (ctx == null) ? 2 : detector.run(ctx);
-                String resultText = parseResult(code);
+                        DetectorEngine detector = new DetectorEngine();
+                        CheckerContext ctx = getCheckerContext(this);
+                        int code = (ctx == null) ? 2 : detector.run(ctx);
+                        String resultText = parseResult(code);
 
-                runOnUiThread(() -> {
-                    tvResult.setText(resultText);
-                    int targetAttr = (code == 1)
-                            ? com.google.android.material.R.attr.colorPrimary
-                            : com.google.android.material.R.attr.colorError;
-                    tvResult.setTextColor(MaterialColors.getColor(this, targetAttr, Color.RED));
-                    btn.setEnabled(true);
-                });
-            }).start();
+                        runOnUiThread(() -> {
+                            tvResult.setText(resultText);
+                            int targetAttr = (code == 1)
+                                    ? com.google.android.material.R.attr.colorPrimary
+                                    : com.google.android.material.R.attr.colorError;
+                            tvResult.setTextColor(MaterialColors.getColor(this, targetAttr, Color.RED));
+                            btn.setEnabled(true);
+                        });
+                    })
+                    .start();
         });
     }
 
@@ -102,7 +107,8 @@ public class MainActivity extends Activity {
         }
         for (Map.Entry<Integer, Checker> entry : DetectorEngine.FlagCheckerMap.entrySet()) {
             if (entry.getValue() != null && (code & entry.getKey()) != 0) {
-                sb.append(String.format(entry.getValue().description(), entry.getKey())).append("\n\n");
+                sb.append(String.format(entry.getValue().description(), entry.getKey()))
+                        .append("\n\n");
             }
         }
         return sb.toString();
@@ -110,9 +116,12 @@ public class MainActivity extends Activity {
 
     private String parseSimpleStatus(int code) {
         switch (code) {
-            case 1: return "Normal (1)";
-            case 2: return "Tampered Attestation Key (2)\n密钥生成 / 使用异常或证书链一致性异常";
-            default: return "Something Wrong (" + code + ")";
+            case 1:
+                return "Normal (1)";
+            case 2:
+                return "Tampered Attestation Key (2)\n密钥生成 / 使用异常或证书链一致性异常";
+            default:
+                return "Something Wrong (" + code + ")";
         }
     }
 }
