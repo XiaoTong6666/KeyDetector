@@ -3,6 +3,7 @@ package com.xiaotong.keydetector;
 import static com.xiaotong.keydetector.Util.getCheckerContext;
 
 import android.app.Activity;
+import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.util.TypedValue;
@@ -17,6 +18,7 @@ import androidx.core.view.WindowInsetsCompat;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.color.DynamicColors;
 import com.google.android.material.textview.MaterialTextView;
+import com.google.android.material.color.MaterialColors;
 import com.xiaotong.keydetector.checker.Checker;
 import java.util.Map;
 
@@ -77,9 +79,8 @@ public class MainActivity extends Activity {
             btn.setEnabled(false);
             tvResult.setText("正在生成密钥并验证证书链...\n请稍候...");
 
-            TypedValue typedValueColor = new TypedValue();
-            getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValueColor, true);
-            tvResult.setTextColor(typedValueColor.data);
+            int neutralColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.GRAY);
+            tvResult.setTextColor(neutralColor);
 
             new Thread(() -> {
                 DetectorEngine detector = new DetectorEngine();
@@ -95,10 +96,13 @@ public class MainActivity extends Activity {
                 final int finalCode = code;
                 runOnUiThread(() -> {
                     tvResult.setText(resultText);
+
                     if ((finalCode & 1) == 0) {
-                        tvResult.setTextColor(getColor(com.google.android.material.R.color.material_dynamic_primary0));
+                        int successColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary, Color.BLUE);
+                        tvResult.setTextColor(successColor);
                     } else {
-                        tvResult.setTextColor(getColor(com.google.android.material.R.color.material_dynamic_tertiary70));
+                        int errorColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorError, Color.RED);
+                        tvResult.setTextColor(errorColor);
                     }
                     btn.setEnabled(true);
                 });
