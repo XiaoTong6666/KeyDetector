@@ -88,9 +88,7 @@ public class MainActivity extends Activity {
 
                         runOnUiThread(() -> {
                             tvResult.setText(resultText);
-                            int targetAttr = (code == 1)
-                                    ? com.google.android.material.R.attr.colorPrimary
-                                    : com.google.android.material.R.attr.colorError;
+                            int targetAttr = (code == 1) ? android.R.attr.colorPrimary : android.R.attr.colorError;
                             tvResult.setTextColor(MaterialColors.getColor(this, targetAttr, Color.RED));
                             btn.setEnabled(true);
                         });
@@ -115,13 +113,10 @@ public class MainActivity extends Activity {
     }
 
     private String parseSimpleStatus(int code) {
-        switch (code) {
-            case 1:
-                return "Normal (1)";
-            case 2:
-                return "Tampered Attestation Key (2)\n密钥生成 / 使用异常或证书链一致性异常";
-            default:
-                return "Something Wrong (" + code + ")";
-        }
+        return switch (code) {
+            case 1 -> "Normal (1)";
+            case 2 -> "Tampered Attestation Key (2)\n密钥生成 / 使用异常或证书链一致性异常";
+            default -> "Something Wrong (" + code + ")";
+        };
     }
 }

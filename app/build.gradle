@@ -1,6 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
-    id "com.diffplug.spotless" version "6.25.0"
+    id "com.diffplug.spotless" version "8.1.0"
 }
 
 import java.security.MessageDigest
@@ -10,9 +10,6 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        ndk {
-            abiFilters "arm64-v8a", "armeabi-v7a"
-        }
         applicationId = "com.xiaotong.keydetector"
         minSdk = 26
         targetSdk = 36
@@ -25,7 +22,7 @@ android {
     signingConfigs {
         var keystoreFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
         if (keystoreFile.exists()) {
-            create("debugKey") {
+            register("debugKey") {
                 storeFile = keystoreFile
                 storePassword = "android"
                 keyAlias = "androiddebugkey"
@@ -58,8 +55,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
     buildFeatures {
