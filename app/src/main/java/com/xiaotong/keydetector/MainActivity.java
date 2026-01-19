@@ -12,6 +12,7 @@ import android.widget.ScrollView;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
+import com.google.android.material.R;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.color.DynamicColors;
 import com.google.android.material.color.MaterialColors;
@@ -31,8 +32,7 @@ public class MainActivity extends Activity {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setGravity(Gravity.CENTER_HORIZONTAL);
 
-        root.setBackgroundColor(
-                MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, Color.WHITE));
+        root.setBackgroundColor(MaterialColors.getColor(this, R.attr.colorSurface, Color.WHITE));
 
         ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
             var systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -42,9 +42,8 @@ public class MainActivity extends Activity {
 
         MaterialTextView title = new MaterialTextView(this);
         title.setText("Key Detector");
-        title.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_HeadlineSmall);
-        title.setTextColor(
-                MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, Color.BLACK));
+        title.setTextAppearance(R.style.TextAppearance_Material3_HeadlineSmall);
+        title.setTextColor(MaterialColors.getColor(this, R.attr.colorOnSurface, Color.BLACK));
         title.setGravity(Gravity.CENTER);
         title.setLayoutParams(new LinearLayout.LayoutParams(-1, -2));
         title.setPadding(0, 32, 0, 48);
@@ -59,14 +58,13 @@ public class MainActivity extends Activity {
         scrollParams.topMargin = 32;
         scrollView.setLayoutParams(scrollParams);
 
-        int surfaceVariant = MaterialColors.getColor(
-                this, com.google.android.material.R.attr.colorSurfaceContainerLow, Color.LTGRAY);
+        int surfaceVariant = MaterialColors.getColor(this, R.attr.colorSurfaceContainerLow, Color.LTGRAY);
         scrollView.setBackgroundColor(surfaceVariant);
         scrollView.setPadding(16, 16, 16, 16);
 
         MaterialTextView tvResult = new MaterialTextView(this);
         tvResult.setText("点击按钮开始检测...");
-        tvResult.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyMedium);
+        tvResult.setTextAppearance(R.style.TextAppearance_Material3_BodyMedium);
         tvResult.setTypeface(Typeface.MONOSPACE);
 
         scrollView.addView(tvResult);
@@ -77,8 +75,7 @@ public class MainActivity extends Activity {
             btn.setEnabled(false);
             tvResult.setText("正在生成密钥并验证证书链...\n请稍候...");
             // 优化：使用语义化颜色属性
-            tvResult.setTextColor(MaterialColors.getColor(
-                    this, com.google.android.material.R.attr.colorOnSurfaceVariant, Color.GRAY));
+            tvResult.setTextColor(MaterialColors.getColor(this, R.attr.colorOnSurfaceVariant, Color.GRAY));
 
             new Thread(() -> {
                         DetectorEngine detector = new DetectorEngine();
@@ -99,7 +96,7 @@ public class MainActivity extends Activity {
 
     private String parseResult(int code) {
         StringBuilder sb = new StringBuilder("Status Code: " + code + "\n状态码: " + code + "\n\n");
-        if (code < 3) {
+        if (code == 1 || code == 0) {
             sb.append(parseSimpleStatus(code));
             return sb.toString();
         }
@@ -115,7 +112,6 @@ public class MainActivity extends Activity {
     private String parseSimpleStatus(int code) {
         return switch (code) {
             case 1 -> "Normal (1)";
-            case 2 -> "Tampered Attestation Key (2)\n密钥生成 / 使用异常或证书链一致性异常";
             default -> "Something Wrong (" + code + ")";
         };
     }

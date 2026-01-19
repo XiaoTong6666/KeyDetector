@@ -13,9 +13,8 @@ android {
         applicationId = "com.xiaotong.keydetector"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
-
+        versionCode = 'git rev-list --count HEAD'.execute([], project.rootDir).text.trim().toInteger()
+        versionName = "1.${'git rev-list --count HEAD'.execute([], project.rootDir).text.trim()}"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -136,7 +135,6 @@ tasks.register("checkAttestationStatus") {
         }
     }
 }
-
 tasks.register('format') {
     dependsOn 'spotlessApply'
     group = 'formatting'

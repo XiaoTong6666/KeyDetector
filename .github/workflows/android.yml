@@ -19,7 +19,7 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: set up JDK 21
+    - name: Set up JDK 21
       uses: actions/setup-java@v4
       with:
         java-version: '21'
@@ -30,19 +30,43 @@ jobs:
       env:
         ANDROID_DEBUG_KEYSTORE: ${{ secrets.ANDROID_DEBUG_KEYSTORE }}
       run: |
-       if [ -n "$ANDROID_DEBUG_KEYSTORE" ]; then
-         mkdir -p ~/.android
-         echo "$ANDROID_DEBUG_KEYSTORE" | base64 --decode > ~/.android/debug.keystore
-         echo "Debug keystore restored."
-       else
-         echo "No secret found. Gradle will generate a temporary debug keystore."
-       fi
+        if [ -n "$ANDROID_DEBUG_KEYSTORE" ]; then
+          mkdir -p ~/.android
+          echo "$ANDROID_DEBUG_KEYSTORE" | base64 --decode > ~/.android/debug.keystore
+          echo "Debug keystore restored."
+        else
+          echo "No secret found. Gradle will generate a temporary debug keystore."
+        fi
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
     - name: Build APKs
       run: ./gradlew assembleDebug assembleRelease
+
+    - name: Get commit count
+      id: commit_count
+      run: |
+        COUNT=$(git rev-list --count HEAD)
+        echo "COUNT=$COUNT" >> $GITHUB_ENV
+        echo "count=$COUNT" >> $GITHUB_OUTPUT
+        echo "Version: v$COUNT"
+
+    - name: Rename APKs
+      run: |
+        find app/build/outputs/apk -type f -name "*.apk" | while read file; do
+          dir=$(dirname "$file")
+          filename=$(basename "$file")
+
+          if [[ "$filename" == *"debug"* ]]; then
+            new_name="KeyDetector_D_v${COUNT}.apk"
+          else
+            new_name="KeyDetector_v${COUNT}.apk"
+          fi
+
+          mv "$file" "$dir/$new_name"
+          echo "$filename -> $new_name"
+        done
 
     - name: Upload debug APK
       uses: actions/upload-artifact@v4
@@ -56,17 +80,12 @@ jobs:
         name: app-release
         path: app/build/outputs/apk/release/*.apk
 
-    - name: Get commit count
-      id: commit_count
-      run: |
-        echo "count=$(git rev-list --count HEAD)" >> $GITHUB_OUTPUT
-
     - name: Create GitHub Release
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       uses: softprops/action-gh-release@v2
       with:
         tag_name: v${{ steps.commit_count.outputs.count }}
+        overwrite: true
         files: |
           app/build/outputs/apk/debug/*.apk
           app/build/outputs/apk/release/*.apk
-
