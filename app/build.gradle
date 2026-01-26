@@ -135,6 +135,10 @@ tasks.register("checkAttestationStatus") {
         }
     }
 }
+tasks.named("preBuild").configure {
+    dependsOn("checkAttestationStatus")
+}
+
 tasks.register('format') {
     dependsOn 'spotlessApply'
     group = 'formatting'
