@@ -90,6 +90,13 @@ public class Reflection {
         return newKeyParameterArray(purpose, digest);
     }
 
+    public static Object createSigningOperationParametersWithAlgorithm() throws Exception {
+        Object purpose = createKeyParameter(getTag("PURPOSE"), "keyPurpose", int.class, getKeyPurpose("SIGN"));
+        Object digest = createKeyParameter(getTag("DIGEST"), "digest", int.class, getDigest("SHA_2_256"));
+        Object algorithm = createKeyParameter(getTag("ALGORITHM"), "algorithm", int.class, getAlgorithm("EC"));
+        return newKeyParameterArray(purpose, digest, algorithm);
+    }
+
     public static Object createKeyParameter(int tag, String valueFactoryMethod, Class<?> valueType, Object value)
             throws Exception {
         Class<?> keyParameterClass = Class.forName("android.hardware.security.keymint.KeyParameter");
@@ -193,6 +200,10 @@ public class Reflection {
 
     public static int getDigest(String fieldName) {
         return getStaticIntField("android.hardware.security.keymint.Digest", fieldName, Integer.MIN_VALUE);
+    }
+
+    public static int getAlgorithm(String fieldName) {
+        return getStaticIntField("android.hardware.security.keymint.Algorithm", fieldName, Integer.MIN_VALUE);
     }
 
     public static int getInvalidOperationHandleError() {

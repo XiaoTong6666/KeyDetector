@@ -26,12 +26,15 @@ import java.security.spec.ECGenParameterSpec;
  *
  * 检测方法：
  * 1. 生成一个测试签名密钥
- * 2. 通过 IKeystoreSecurityLevel.createOperation() 创建签名操作
- * 3. 探测 updateAad 的异常路径是否走 ServiceSpecificException
- * 4. 探测超长输入 update() 是否按 AOSP 返回错误
- * 5. 探测 abort() 之后操作句柄是否失效
+ * 2. 使用最小 AOSP 风格参数通过 IKeystoreSecurityLevel.createOperation() 创建签名操作
+ * 3. 若 createOperation() 对有效签名 key 异常失败，则直接记为异常
+ * 4. 必要时使用带 ALGORITHM 的兼容参数继续创建操作，避免后续探针被提前短路
+ * 5. 探测 updateAad 的异常路径是否走 ServiceSpecificException
+ * 6. 探测超长输入 update() 是否按 AOSP 返回错误
+ * 7. 探测 abort() 之后操作句柄是否失效
  *
  * 判定规则：
+ * - 若 createOperation() 对有效签名 key 异常失败，视为异常
  * - 若错误没有走 ServiceSpecificException 通道，视为异常
  * - 若超长输入被直接接受，视为异常
  * - 若 abort() 后句柄仍可继续使用，或错误码不是 INVALID_OPERATION_HANDLE，视为异常
@@ -68,6 +71,13 @@ public final class OperationErrorPathChecker extends Checker {
                 return false;
             }
 
+            BootstrapResult bootstrapResult = bootstrapOperationParameters(probeContext);
+            boolean anomalyDetected = bootstrapResult.anomalyDetected;
+            if (bootstrapResult.operationParameters == null) {
+                return true;
+            }
+            probeContext.activeSigningParameters = bootstrapResult.operationParameters;
+
             if (probeUpdateAad(probeContext)) {
                 return true;
             }
@@ -75,6 +85,13 @@ public final class OperationErrorPathChecker extends Checker {
                 return true;
             }
             if (probeInvalidHandleAfterAbort(probeContext)) {
+                return true;
+            }
+
+            if (anomalyDetected) {
+                Log.e(
+                        TAG,
+                        "ANOMALY: createOperation required compatibility parameters before later probes could run.");
                 return true;
             }
 
@@ -121,7 +138,44 @@ public final class OperationErrorPathChecker extends Checker {
                     "getKeyEntry did not return KEY_ID descriptor; reconstructing KEY_ID descriptor for follow-up probes.");
         }
 
-        return new ProbeContext(operationDescriptor, iSecurityLevel, Reflection.createSigningOperationParameters());
+        return new ProbeContext(
+                operationDescriptor,
+                iSecurityLevel,
+                Reflection.createSigningOperationParameters(),
+                Reflection.createSigningOperationParametersWithAlgorithm());
+    }
+
+    private BootstrapResult bootstrapOperationParameters(ProbeContext probeContext) throws Exception {
+        Object operation = null;
+        try {
+            operation = createSigningOperation(probeContext, probeContext.minimalSigningParameters);
+            Log.d(TAG, "createOperation accepted minimal AOSP-style params.");
+            return new BootstrapResult(probeContext.minimalSigningParameters, false);
+        } catch (Throwable t) {
+            Log.e(
+                    TAG,
+                    "ANOMALY: createOperation failed for a valid signing key using minimal AOSP-style params: "
+                            + Reflection.describeThrowable(t));
+        } finally {
+            abortQuietly(operation);
+        }
+
+        operation = null;
+        try {
+            operation = createSigningOperation(probeContext, probeContext.compatibilitySigningParameters);
+            Log.w(
+                    TAG,
+                    "createOperation succeeded only after adding compatibility parameters; continuing with fallback params.");
+            return new BootstrapResult(probeContext.compatibilitySigningParameters, true);
+        } catch (Throwable t) {
+            Log.e(
+                    TAG,
+                    "ANOMALY: createOperation also failed with compatibility parameters: "
+                            + Reflection.describeThrowable(t));
+            return new BootstrapResult(null, true);
+        } finally {
+            abortQuietly(operation);
+        }
     }
 
     private boolean probeUpdateAad(ProbeContext probeContext) throws Exception {
@@ -215,8 +269,12 @@ public final class OperationErrorPathChecker extends Checker {
     }
 
     private Object createSigningOperation(ProbeContext probeContext) throws Exception {
+        return createSigningOperation(probeContext, probeContext.activeSigningParameters);
+    }
+
+    private Object createSigningOperation(ProbeContext probeContext, Object operationParameters) throws Exception {
         Object createOperationResponse = Reflection.createOperation(
-                probeContext.securityLevelBinder, probeContext.keyIdDescriptor, probeContext.signingParameters);
+                probeContext.securityLevelBinder, probeContext.keyIdDescriptor, operationParameters);
         Object operation = Reflection.getOperationBinder(createOperationResponse);
         if (operation == null) {
             throw new IllegalStateException("createOperation returned null iOperation");
@@ -246,18 +304,36 @@ public final class OperationErrorPathChecker extends Checker {
 
     @Override
     public String description() {
-        return "IKeystoreOperation Error-Path Anomaly (%d) - 非 ServiceSpecificException / TOO_MUCH_DATA / INVALID_OPERATION_HANDLE 语义异常";
+        return "IKeystoreOperation Error-Path Anomaly (%d) - createOperation / ServiceSpecificException / TOO_MUCH_DATA / INVALID_OPERATION_HANDLE 语义异常";
     }
 
     private static final class ProbeContext {
         final Object keyIdDescriptor;
         final Object securityLevelBinder;
-        final Object signingParameters;
+        final Object minimalSigningParameters;
+        final Object compatibilitySigningParameters;
+        Object activeSigningParameters;
 
-        ProbeContext(Object keyIdDescriptor, Object securityLevelBinder, Object signingParameters) {
+        ProbeContext(
+                Object keyIdDescriptor,
+                Object securityLevelBinder,
+                Object minimalSigningParameters,
+                Object compatibilitySigningParameters) {
             this.keyIdDescriptor = keyIdDescriptor;
             this.securityLevelBinder = securityLevelBinder;
-            this.signingParameters = signingParameters;
+            this.minimalSigningParameters = minimalSigningParameters;
+            this.compatibilitySigningParameters = compatibilitySigningParameters;
+            this.activeSigningParameters = minimalSigningParameters;
+        }
+    }
+
+    private static final class BootstrapResult {
+        final Object operationParameters;
+        final boolean anomalyDetected;
+
+        BootstrapResult(Object operationParameters, boolean anomalyDetected) {
+            this.operationParameters = operationParameters;
+            this.anomalyDetected = anomalyDetected;
         }
     }
 }
